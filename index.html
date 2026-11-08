@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ad Studio demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800&family=Schibsted+Grotesk:wght@400;600;700&display=swap">
+<style>
+:root{--bg:#F1F3F6;--surface:#fff;--ink:#16212B;--muted:#5B6773;--line:#D9DFE5;--focus:#0E6B73;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161C;--surface:#18212A;--ink:#E8EDF2;--muted:#9AA7B3;--line:#2A3541;--focus:#5CC4CD}}
+:root[data-theme="dark"]{--bg:#10161C;--surface:#18212A;--ink:#E8EDF2;--muted:#9AA7B3;--line:#2A3541;--focus:#5CC4CD}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "Schibsted Grotesk",system-ui,Arial,sans-serif}
+.app{max-width:1100px;margin:0 auto;padding:28px 20px 40px;display:grid;grid-template-columns:290px 1fr;gap:28px}
+@media(max-width:820px){.app{grid-template-columns:1fr}}
+h1{font-size:24px;line-height:1.2;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;align-content:start}
+h2{font-size:15px;margin:0}
+label{display:grid;gap:5px;font-weight:600;font-size:13px}
+input[type=text],input[type=file]{font:inherit;font-weight:400;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);width:100%}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw button{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
+.link{font:inherit;font-size:13px;background:none;border:0;color:var(--focus);cursor:pointer;padding:0;width:fit-content;text-decoration:underline}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.stages{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+figure{margin:0}figcaption{margin-top:8px;font-size:13px;color:var(--muted)}
+.cv{line-height:0;box-shadow:0 1px 3px rgba(0,0,0,.18);width:fit-content}
+.note{margin-top:22px;color:var(--muted);max-width:60ch}
+#err{padding:12px;border:1px solid #B3261E;border-radius:6px;color:#B3261E}
+</style></head>
+<body><main class="app">
+<div>
+ <h1>Ad Studio</h1>
+ <p class="lead">Edit the fields below. Every ad size updates at once.</p>
+ <form class="panel" onsubmit="return false">
+  <h2>Message</h2>
+  <label>Headline<input type="text" id="head" maxlength="40" value="Spring tune-up season"></label>
+  <label>Offer<input type="text" id="offer" maxlength="26" value="Save 20% this week"></label>
+  <label>Button<input type="text" id="cta" maxlength="20" value="Book a tune-up"></label>
+  <h2>Brand</h2>
+  <div class="sw" id="sw" role="group" aria-label="Brand color presets"></div>
+  <label>Brand color (HEX)<input type="text" id="hex" value="#0E6B73" maxlength="7"></label>
+  <label>Logo<input type="file" id="logo" accept="image/*"></label>
+  <button type="button" class="link" id="logoReset">Use sample logo</button>
+ </form>
+</div>
+<section>
+ <p id="err" hidden>The preview couldn’t load. Check your connection and reload the page.</p>
+ <div class="stages">
+  <figure><div class="cv" id="ca"></div><figcaption>Display ad, 300 × 250</figcaption></figure>
+  <figure><div class="cv" id="cb"></div><figcaption>Meta feed ad, 1080 × 1350</figcaption></figure>
+ </div>
+ <p class="note">Layout, fonts and positions are locked in the template. Clients can only change the fields on the left, so every ad stays on-brand. The final download is rendered from the same template, so it matches this preview.</p>
+</section>
+</main>
+<script>
+const FF='Archivo, Arial, sans-serif',COLORS=['#0E6B73','#3B3FA8','#B3262E','#2F6B3A','#D9531E'],ACC='#FFC857';
+const LAY={
+ a:{w:300,h:250,base:1,el:'ca',photo:[170,0,130,250],logo:[16,14,34],head:{x:16,y:62,w:146,h:84,fs:24},offer:{x:16,y:154,h:26,fs:13},cta:{x:16,y:196,w:118,h:34,fs:14},bike:[236,160,32]},
+ b:{w:1080,h:1350,base:.29,el:'cb',photo:[0,0,1080,700],logo:[72,72,120],head:{x:72,y:750,w:936,h:300,fs:92},offer:{x:72,y:1070,h:84,fs:40},cta:{x:72,y:1182,w:440,h:104,fs:42},bike:[540,410,190]}
+};
+const v={logo:null,brand:COLORS[0]},st={};
+const $=id=>document.getElementById(id);
+function shade(h,p){const n=parseInt(h.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const t=p<0?0:255,a=Math.abs(p);r=Math.round((t-r)*a+r);g=Math.round((t-g)*a+g);b=Math.round((t-b)*a+b);return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1)}
+function onC(h){const n=parseInt(h.slice(1),16);return ((n>>16)*.299+(n>>8&255)*.587+(n&255)*.114)/255>.6?'#14202B':'#FFFFFF'}
+function scaleOf(L){const k=innerWidth>1000?1.15:1;return Math.min(L.base*k,(innerWidth-40)/L.w)}
+function bike(ly,cx,cy,r){const o={stroke:'#fff',strokeWidth:r*.1,lineCap:'round',lineJoin:'round',opacity:.95};
+ [-1.1,1.1].forEach(d=>ly.add(new Konva.Circle({x:cx+d*r,y:cy,radius:r,...o})));
+ const R=[cx-1.1*r,cy],F=[cx+1.1*r,cy],B=[cx-.1*r,cy],S=[cx-.4*r,cy-.95*r],H=[cx+.7*r,cy-r];
+ [[...R,...B,...S,...R],[...S,...H,...B],[...H,...F],[...H,H[0]-.15*r,H[1]-.3*r,H[0]+.1*r,H[1]-.3*r],[S[0]-.2*r,S[1]-.08*r,S[0]+.15*r,S[1]-.08*r]].forEach(p=>ly.add(new Konva.Line({points:p,...o})));
+ ly.add(new Konva.Line({points:[cx-2.6*r,cy+r*1.12,cx+2.6*r,cy+r*1.12],stroke:'#fff',strokeWidth:r*.05,opacity:.35,lineCap:'round'}));}
+function draw(L,ly){
+ const brand=v.brand,tc=onC(brand),big=L.w>500,[px,py,pw,ph]=L.photo;
+ ly.add(new Konva.Rect({width:L.w,height:L.h,fill:brand}));
+ ly.add(new Konva.Rect({x:px,y:py,width:pw,height:ph,fillLinearGradientStartPoint:{x:0,y:0},fillLinearGradientEndPoint:{x:pw,y:ph},fillLinearGradientColorStops:[0,shade(brand,-.15),1,shade(brand,-.55)]}));
+ ly.add(new Konva.Circle({x:px+pw*.78,y:py+ph*.2,radius:Math.min(pw,ph)*.11,fill:ACC}));
+ bike(ly,...L.bike);
+ const [lx,lt,ls]=L.logo;
+ if(v.logo){const bw=ls*1.7,im=v.logo,k=Math.min((bw-ls*.2)/im.naturalWidth,ls*.8/im.naturalHeight),w=im.naturalWidth*k,h=im.naturalHeight*k;
+  ly.add(new Konva.Rect({x:lx,y:lt,width:bw,height:ls,fill:'#fff',cornerRadius:ls*.2}));
+  ly.add(new Konva.Image({image:im,x:lx+(bw-w)/2,y:lt+(ls-h)/2,width:w,height:h}));
+ }else{ly.add(new Konva.Circle({x:lx+ls/2,y:lt+ls/2,radius:ls/2,fill:'#fff'}));
+  ly.add(new Konva.Text({x:lx,y:lt,width:ls,height:ls,text:'K',align:'center',verticalAlign:'middle',fontFamily:FF,fontStyle:'800',fontSize:ls*.55,fill:brand}));
+  ly.add(new Konva.Text({x:lx+ls*1.25,y:lt,height:ls,verticalAlign:'middle',text:'Kestrel Cycles',fontFamily:FF,fontStyle:'700',fontSize:big?40:12,fill:big?'#fff':tc}));}
+ const hd=L.head;
+ ly.add(new Konva.Text({x:hd.x,y:hd.y,width:hd.w,height:hd.h,text:v.head,fontFamily:FF,fontStyle:'800',fontSize:hd.fs,lineHeight:1.05,fill:tc,wrap:'word',ellipsis:true}));
+ const of=L.offer,tw=new Konva.Text({text:v.offer,fontFamily:FF,fontStyle:'700',fontSize:of.fs}).width(),pad=of.h*.55;
+ ly.add(new Konva.Rect({x:of.x,y:of.y,width:tw+pad*2,height:of.h,cornerRadius:of.h/2,fill:ACC}));
+ ly.add(new Konva.Text({x:of.x+pad,y:of.y,height:of.h,verticalAlign:'middle',text:v.offer,fontFamily:FF,fontStyle:'700',fontSize:of.fs,fill:'#14202B'}));
+ const c=L.cta,dark=tc!=='#FFFFFF';
+ ly.add(new Konva.Rect({x:c.x,y:c.y,width:c.w,height:c.h,cornerRadius:c.h*.3,fill:dark?'#14202B':'#fff'}));
+ ly.add(new Konva.Text({x:c.x,y:c.y,width:c.w,height:c.h,align:'center',verticalAlign:'middle',text:v.cta,fontFamily:FF,fontStyle:'700',fontSize:c.fs,fill:dark?'#fff':brand,ellipsis:true,wrap:'none'}));
+}
+function render(){
+ v.head=$('head').value;v.offer=$('offer').value;v.cta=$('cta').value;
+ for(const k in LAY){const L=LAY[k],s=scaleOf(L);
+  if(!st[k]){const stage=new Konva.Stage({container:L.el,width:1,height:1}),ly=new Konva.Layer();stage.add(ly);st[k]={stage,ly}}
+  const {stage,ly}=st[k];stage.width(L.w*s);stage.height(L.h*s);ly.scale({x:s,y:s});ly.destroyChildren();draw(L,ly);ly.draw();}
+}
+function setBrand(h){v.brand=h.toUpperCase();$('hex').value=v.brand;[...$('sw').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.c===v.brand));render()}
+function start(){
+ COLORS.forEach(c=>{const b=document.createElement('button');b.type='button';b.dataset.c=c;b.style.background=c;b.setAttribute('aria-label','Use '+c);b.onclick=()=>setBrand(c);$('sw').appendChild(b)});
+ ['head','offer','cta'].forEach(i=>$(i).addEventListener('input',render));
+ $('hex').addEventListener('input',e=>{if(/^#[0-9a-f]{6}$/i.test(e.target.value))setBrand(e.target.value)});
+ $('logo').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;try{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{v.logo=im;render()};im.src=r.result};r.readAsDataURL(f)}catch(x){console.error(x)}});
+ $('logoReset').addEventListener('click',()=>{v.logo=null;$('logo').value='';render()});
+ addEventListener('resize',render);setBrand(v.brand);
+ Promise.all([document.fonts.load('800 24px Archivo'),document.fonts.load('700 14px Archivo')]).then(render).catch(()=>{});
+}
+function loadK(s,cb){const u=s.shift();if(!u)return cb(false);const e=document.createElement('script');e.src=u;e.onload=()=>cb(true);e.onerror=()=>loadK(s,cb);document.head.appendChild(e)}
+loadK(['https://cdn.jsdelivr.net/npm/konva@9.3.6/konva.min.js','https://cdnjs.cloudflare.com/ajax/libs/konva/9.3.6/konva.min.js'],ok=>ok?start():($('err').hidden=false));
+</script></body></html>
